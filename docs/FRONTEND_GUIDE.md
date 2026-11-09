@@ -49,7 +49,7 @@ If you need a widget, build it inside your page module. Mention any shared need 
 ### CSS
 Tokens in `css/tokens.css` (both themes): `--bg --surface --surface-2 --surface-3 --line --line-2 --text --text-2
 --text-3 --accent --accent-soft --accent-text --live --ok --warn --bad (+ -soft, -text) --c-<channel>
---r-card(18) --r-ctl(10) --r-pill --shadow-1 --shadow-2 --ease --t-fast --t-med --mono`.
+--r-card(14) --r-ctl(10) --r-pill --shadow-1 --shadow-2 --ease --t-fast --t-med --mono`.
 Utility classes in base/components: `row col grow between wrap top gap-6 gap-16 mt-8 mt-16 mt-24 grid grid-2 grid-3
 grid-4 muted faint small tiny strong ellipsis clamp-2 clamp-3 pre ltr num mono card pad tight well notice(.warn .bad .ok)
 chip(.on) count list>.item(.click) table table-wrap kv thumb sim tabs seg badge`.

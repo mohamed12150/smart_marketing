@@ -22,23 +22,33 @@ def _brand_host(brand: settings.Brand) -> str:
     return host.removeprefix("www.")
 
 
-def risky(reply_text: str, brand: settings.Brand) -> str:
+def risky(reply_text: str, brand: settings.Brand, extra_known: str = "") -> str:
     """Why an auto-reply must wait for the owner: a link or number the brand does not own (a customer may have
-    planted it), or a price/discount the brand file does not contain. Hosts match exactly (or as a subdomain)."""
+    planted it), or a price/discount neither the brand file nor `extra_known` (the knowledge base) contains.
+    Hosts match exactly (or as a subdomain)."""
     text_ = unicodedata.normalize("NFKC", reply_text).translate(DIGITS)
+    known_extra = unicodedata.normalize("NFKC", extra_known or "").translate(DIGITS)
     site = _brand_host(brand)
     for m in HOST_RE.finditer(text_):
         host = m.group(1).lower().removeprefix("www.")
-        if not site or not (host == site or host.endswith("." + site)):
-            return "يحتوي رابطًا خارجيًا"
+        if site and (host == site or host.endswith("." + site)):
+            continue
+        if host and host in known_extra.lower():  # a host the owner wrote in the knowledge base
+            continue
+        return "يحتوي رابطًا خارجيًا"
     own = re.sub(r"\D", "", (brand.phone or "").translate(DIGITS))
     compact = re.sub(r"[\s.\-()/]", "", text_)
+    extra_digits = re.sub(r"[\s.\-()/]", "", known_extra)
     for digits in re.findall(r"\+?\d{7,}", compact):
         number = digits.lstrip("+")
-        if not own or (number not in own and own[-9:] not in number):
-            return "يحتوي رقمًا غير رقم الشركة"
+        if own and (number in own or own[-9:] in number):
+            continue
+        if number in extra_digits:
+            continue
+        return "يحتوي رقمًا غير رقم الشركة"
     known = unicodedata.normalize("NFKC", " ".join(
-        [brand.description, brand.dos, *[f"{p.name} {p.price} {p.description}" for p in brand.products]])).translate(DIGITS)
+        [brand.description, brand.dos, known_extra,
+         *[f"{p.name} {p.price} {p.description}" for p in brand.products]])).translate(DIGITS)
     known_amounts = set(re.findall(r"\d+(?:[.,]\d+)?", known))
     for m in MONEY_RE.finditer(text_):
         amount = re.match(r"\d+(?:[.,]\d+)?", m.group(0)).group(0)

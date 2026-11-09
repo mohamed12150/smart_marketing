@@ -22,7 +22,7 @@ from . import serial
 from .deps import ApiError, actor, cap, found, get_db, ok, viewer
 
 router = APIRouter(prefix="/api", tags=["settings"])
-EDITABLE_SECTIONS = ("brand", "notify", "general", "ai", "goals")
+EDITABLE_SECTIONS = ("brand", "notify", "general", "ai", "goals", "knowledge")
 # Where reports go and which public URL links point at are trust anchors; goals steer القائد's own interventions.
 SECTION_CAP = {"notify": "notify", "general": "notify", "goals": "autonomy"}
 CREDENTIAL_ANCHORS = {"email": ("smtp_host", "smtp_port", "username")}

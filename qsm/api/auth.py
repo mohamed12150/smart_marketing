@@ -13,6 +13,7 @@ from .. import config, events, security, settings
 from ..models import User
 from . import serial
 from .deps import ApiError, RateLimiter, client_ip, current_user, get_db, ok
+from .deps import open_owner as deps_open_owner
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 login_limiter = RateLimiter(limit=10, window_s=60)       # per IP
@@ -49,7 +50,7 @@ def _set_cookie(response: Response, token: str, request: Request | None = None) 
 
 @router.get("/state")
 def state(request: Request, s: Session = Depends(get_db, scope="function")) -> dict:
-    user = security.resolve_session(s, request.cookies.get(security.COOKIE_NAME))
+    user = security.resolve_session(s, request.cookies.get(security.COOKIE_NAME)) or deps_open_owner(s)
     brand = settings.get(s, "brand")
     return ok({"setup_needed": not security.any_user(s), "user": serial.user(user) if user else None,
                "company": brand.name})

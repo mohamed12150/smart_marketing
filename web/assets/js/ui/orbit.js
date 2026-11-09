@@ -101,7 +101,7 @@ function Node({ id, agent, selected, onPick, dim }) {
     <circle class="body" cx=${p.x} cy=${p.y} r=${p.r} />
     <circle class="ring" cx=${p.x} cy=${p.y} r=${p.r + 5} style=${{ stroke: tint }} />
     <circle class="spin" cx=${p.x} cy=${p.y} r=${p.r + 5} style=${{ stroke: tint }} />
-    <g transform=${`translate(${p.x - iconSize / 2},${p.y - iconSize / 2})`} class="glyph" style=${{ color: isChannel ? tint : id === 'ceo' ? '#fff' : 'var(--accent-text)' }}>
+    <g transform=${`translate(${p.x - iconSize / 2},${p.y - iconSize / 2})`} class="glyph" style=${{ color: isChannel ? tint : id === 'ceo' ? 'var(--on-accent)' : 'var(--accent-text)' }}>
       <${Icon} name=${AGENT_ICON[id]} size=${iconSize} />
     </g>
     <text class="lbl" x=${p.x} y=${p.y + p.r + 24} text-anchor="middle">${label}</text>
@@ -115,7 +115,6 @@ export function OrbitMap({ agents = [], pulses = [], pings = [], selected, onPic
   const o = POS.owner;
   return html`<svg class="orbit" viewBox=${`0 0 ${VIEW.w} ${VIEW.h}`} role="img" aria-label="خريطة الشبكة الحية">
     <defs>
-      <radialGradient id="core" cx="50%" cy="38%" r="70%"><stop offset="0" stop-color="#8f8fff" /><stop offset="1" stop-color="#4b4be0" /></radialGradient>
       <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" /></filter>
     </defs>
     <circle class="orbit-ring" cx=${C.x} cy=${C.y} r="150" />

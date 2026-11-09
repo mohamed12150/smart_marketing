@@ -37,6 +37,7 @@ class Config:
     scheduler_enabled: bool
     max_upload_mb: int
     setup_token: str = ""
+    open_auth: bool = False  # development only: every visit is the owner (QSM_OPEN_AUTH=1); never in production
 
     @property
     def is_production(self) -> bool:
@@ -112,6 +113,7 @@ def load() -> Config:
         scheduler_enabled=_flag("QSM_SCHEDULER", True),
         max_upload_mb=int(os.environ.get("QSM_MAX_UPLOAD_MB", "200")),
         setup_token=os.environ.get("QSM_SETUP_TOKEN", ""),
+        open_auth=_flag("QSM_OPEN_AUTH", False) and env != "production",
     )
 
 

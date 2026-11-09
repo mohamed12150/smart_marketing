@@ -38,6 +38,24 @@ class Brand(BaseModel):
     base_hashtags: list[str] = Field(default_factory=list, max_length=20)
 
 
+class QA(BaseModel):
+    question: str = Field(max_length=300)
+    answer: str = Field(default="", max_length=1200)
+
+
+class Policy(BaseModel):
+    title: str = Field(max_length=120)
+    text: str = Field(default="", max_length=1500)
+
+
+class Knowledge(BaseModel):
+    """The only facts (besides the brand brief) agents may state to customers. A question these do not answer is
+    never guessed: the agent says it will check and escalates to the owner."""
+    faqs: list[QA] = Field(default_factory=list, max_length=80)
+    policies: list[Policy] = Field(default_factory=list, max_length=24)
+    notes: str = Field(default="", max_length=3000)
+
+
 class Raise(BaseModel):
     """How far the campaign manager may raise limits on its own."""
     enabled: bool = True
@@ -124,7 +142,7 @@ class AI(BaseModel):
 
 SECTIONS: dict[str, type[BaseModel]] = {
     "brand": Brand, "limits": Limits, "notify": Notify, "autonomy": Autonomy, "general": General, "ai": AI,
-    "goals": Goals,
+    "goals": Goals, "knowledge": Knowledge,
 }
 
 

@@ -7,9 +7,10 @@ from collections.abc import Iterator
 from typing import Any
 
 from fastapi import Depends, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import db, permissions, security
+from .. import config, db, permissions, security
 from ..models import User
 
 
@@ -32,8 +33,15 @@ def get_db() -> Iterator[Session]:
         yield s
 
 
+def open_owner(s: Session) -> User | None:
+    """Development's open door (QSM_OPEN_AUTH): every visit acts as the owner. Off in production by construction."""
+    if not config.get().open_auth:
+        return None
+    return s.scalar(select(User).where(User.role == "owner", User.active).order_by(User.created_at))
+
+
 def current_user(request: Request, s: Session = Depends(get_db, scope="function")) -> User:
-    user = security.resolve_session(s, request.cookies.get(security.COOKIE_NAME))
+    user = security.resolve_session(s, request.cookies.get(security.COOKIE_NAME)) or open_owner(s)
     if user is None:
         raise ApiError(401, "unauthorized", "انتهت الجلسة — سجّل الدخول")
     return user

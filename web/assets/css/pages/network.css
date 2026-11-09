@@ -25,7 +25,7 @@
 .link.watch { stroke-dasharray: 2 6; }
 .node { cursor: pointer; outline: none; }
 .node .body { fill: var(--surface); stroke: var(--line-2); stroke-width: 1; transition: stroke var(--t-fast); }
-.node[data-id='ceo'] .body { fill: url(#core); stroke: none; }
+.node[data-id='ceo'] .body { fill: var(--accent); stroke: none; }
 .node .halo { opacity: 0; filter: blur(16px); transition: opacity var(--t-med); }
 .node .ring { fill: none; stroke-width: 2; opacity: 0; transition: opacity var(--t-fast); }
 .node .spin { fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-dasharray: 22 240; opacity: 0; }

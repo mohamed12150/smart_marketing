@@ -11,11 +11,10 @@ import { ToastHost, ConfirmHost, toast } from '../ui/overlays.js';
 
 export function BrandMark({ size = 36 }) {
   return html`<svg class="brand-mark" width=${size} height=${size} viewBox="0 0 64 64" aria-hidden="true">
-    <defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8585ff" /><stop offset="1" stop-color="#46c2d2" /></linearGradient></defs>
-    <rect width="64" height="64" rx="18" fill="#0d1428" />
-    <circle cx="32" cy="32" r="19" fill="none" stroke="url(#bm)" stroke-width="2.2" opacity="0.55" />
-    <circle cx="32" cy="32" r="8.5" fill="url(#bm)" />
-    <circle cx="32" cy="13" r="3.6" fill="#46c2d2" /><circle cx="48.5" cy="41.5" r="3.6" fill="#8585ff" /><circle cx="15.5" cy="41.5" r="3.6" fill="#46c2d2" />
+    <rect width="64" height="64" rx="14" fill="var(--accent)" />
+    <circle cx="32" cy="32" r="19" fill="none" stroke="var(--on-accent)" stroke-width="2" opacity="0.45" />
+    <circle cx="32" cy="32" r="8.5" fill="var(--on-accent)" />
+    <circle cx="32" cy="13" r="3.6" fill="var(--live)" /><circle cx="48.5" cy="41.5" r="3.6" fill="var(--on-accent)" /><circle cx="15.5" cy="41.5" r="3.6" fill="var(--live)" />
   </svg>`;
 }
 
@@ -37,22 +36,33 @@ const NAV = [
 
 const isOn = (href, path) => (href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`));
 
-function NavList({ path, counts, onPick }) {
-  return html`<nav class="nav">${NAV.map((n, i) => n.group
+// الوضع البسيط: يعرض شاشات اليوم فقط؛ «غرفة المكاين» تظهر بزر «كل الشاشات». الصفحة المفتوحة تظهر دائمًا.
+const DAILY = new Set(['/', '/approvals', '/inbox', '/reports', '/settings']);
+
+export function navMode() {
+  try { return localStorage.getItem('qsm-nav') === 'full'; } catch { return false; }
+}
+
+function NavList({ path, counts, onPick, full, onMode }) {
+  const items = full ? NAV : NAV.filter((n) => !n.group && (DAILY.has(n.href) || isOn(n.href, path)));
+  return html`<nav class="nav">${items.map((n, i) => n.group
     ? html`<div class="nav-group" key=${`g${i}`}>${n.group}</div>`
     : html`<${Link} key=${n.href} href=${n.href} class=${isOn(n.href, path) ? 'on' : ''} onClick=${onPick}>
         ${n.channel ? html`<${ChannelMark} ch=${n.channel} size="sm" />` : html`<${Icon} name=${n.icon} size="19" />`}
         <span>${n.label}</span>
         ${n.badge && counts[n.badge] ? html`<span class="count">${counts[n.badge]}</span>` : null}
-      </${Link}>`)}</nav>`;
+      </${Link}>`)}
+    <button class="nav-mode" onClick=${onMode}>
+      <${Icon} name=${full ? 'list' : 'grid'} size="17" /><span>${full ? 'القائمة المبسطة' : 'كل الشاشات'}</span></button>
+  </nav>`;
 }
 
-function Side({ path, counts }) {
+function Side({ path, counts, full, onMode }) {
   const live = useLiveStatus();
   const company = useStore(session).company;
   return html`<aside class="side">
     <div class="brand"><${BrandMark} /><div><b>Qhub Smart Marketing</b><span>${company}</span></div></div>
-    <${NavList} path=${path} counts=${counts} />
+    <${NavList} path=${path} counts=${counts} full=${full} onMode=${onMode} />
     <div class="side-foot"><div class="engine"><span class=${cls('status-dot', live ? 'working' : 'error')} />
       ${live ? 'الشبكة متصلة مباشرة' : 'إعادة الاتصال بالشبكة…'}</div></div>
   </aside>`;
@@ -66,9 +76,8 @@ export function applyTheme(mode) {
 }
 
 function currentTheme() {
-  const set = document.documentElement.getAttribute('data-theme');
-  if (set) return set;
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  // Light is the product's default face; dark is a choice, never the system's.
+  return document.documentElement.getAttribute('data-theme') || 'light';
 }
 
 function AutonomyMenu({ level }) {
@@ -140,7 +149,7 @@ function Account() {
     </div>`;
 }
 
-function TabBar({ path, counts }) {
+function TabBar({ path, counts, full, onMode }) {
   const [more, setMore] = useState(false);
   const tabs = [
     { href: '/', icon: 'orbit', label: 'الشبكة' }, { href: '/approvals', icon: 'checkCircle', label: 'الاعتماد', badge: 'approvals' },
@@ -149,12 +158,18 @@ function TabBar({ path, counts }) {
   return html`<nav class="tabbar">${tabs.map((t) => html`<${Link} key=${t.href} href=${t.href} class=${isOn(t.href, path) ? 'on' : ''}>
       <${Icon} name=${t.icon} size="21" />${t.label}${t.badge && counts[t.badge] ? html`<span class="count">${counts[t.badge]}</span>` : null}</${Link}>`)}
     <button class=${more ? 'on' : ''} onClick=${() => setMore(!more)}><${Icon} name="grid" size="21" />المزيد</button></nav>
-    ${more && html`<div class="overlay" onClick=${() => setMore(false)} /><div class="more-sheet"><${NavList} path=${path} counts=${counts} onPick=${() => setMore(false)} /></div>`}`;
+    ${more && html`<div class="overlay" onClick=${() => setMore(false)} /><div class="more-sheet"><${NavList} path=${path} counts=${counts} full=${full} onMode=${onMode} onPick=${() => setMore(false)} /></div>`}`;
 }
 
 export function Shell({ title, children }) {
   const { path } = useRoute();
   const s = useStore(shell);
+  const [fullNav, setFullNav] = useState(navMode);
+  const flipNav = () => {
+    const next = !fullNav;
+    setFullNav(next);
+    try { localStorage.setItem('qsm-nav', next ? 'full' : 'simple'); } catch { /* storage blocked */ }
+  };
   useEffect(() => {
     api.raw('/approvals?limit=1').then((j) => shell.set({ approvals: Object.values(j.meta?.counts || {}).reduce((a, b) => a + b, 0) })).catch(() => {});
     api.raw('/notifications?limit=1').then((j) => shell.set({ unread: j.meta?.unread || 0 })).catch(() => {});
@@ -170,7 +185,7 @@ export function Shell({ title, children }) {
   useEffect(() => { document.title = `${title} · Qhub Smart Marketing`; }, [title]);
   const counts = { approvals: s.approvals };
   return html`<div class="shell">
-    <${Side} path=${path} counts=${counts} />
+    <${Side} path=${path} counts=${counts} full=${fullNav} onMode=${flipNav} />
     <div class="main">
       <header class="topbar"><h1>${title}</h1><div class="top-actions">
         <${AutonomyMenu} level=${s.autonomy} />
@@ -180,7 +195,7 @@ export function Shell({ title, children }) {
       </div></header>
       <main class="page" id="main">${children}</main>
     </div>
-    <${TabBar} path=${path} counts=${counts} />
+    <${TabBar} path=${path} counts=${counts} full=${fullNav} onMode=${flipNav} />
     <${ToastHost} /><${ConfirmHost} />
   </div>`;
 }

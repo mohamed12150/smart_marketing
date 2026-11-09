@@ -106,6 +106,20 @@ async def reply(ctx: Ctx) -> dict[str, Any]:
         contact = s.get(Contact, conv.contact_id) if conv.contact_id else None
         name = contact.name if contact else ""
         brand = settings.get(s, "brand")
+        kb_text = prompts.knowledge_block(settings.get(s, "knowledge"))
+        history_line = ""
+        if contact is not None:  # what we already know about this person — trusted, owner-side data
+            past = s.scalars(select(Conversation).where(Conversation.contact_id == contact.id,
+                                                        Conversation.id != conv_id)
+                             .order_by(Conversation.last_message_at.desc()).limit(5)).all()
+            stage = {"new": "جديد", "lead": "فرصة بيع", "customer": "عميل حالي"}.get(contact.stage, contact.stage)
+            bits = [f"المرحلة: {stage}"]
+            if past:
+                cats = "، ".join(CATEGORY_LABELS.get(p.category) or "أخرى" for p in past)
+                bits.append(f"محادثات سابقة: {len(past)} ({cats})")
+            if contact.notes.strip():
+                bits.append("ملاحظات المالك عنه: " + text.clip(contact.notes, 300))
+            history_line = "سجل العميل عندنا: " + " — ".join(bits)
         cap = settings.get(s, "limits").replies_per_hour
         if cap and limits.replies_last_hour(s) >= cap:
             enqueue(s, kind="content.reply", title=ctx.title, input={"conversation_id": conv_id},
@@ -121,12 +135,17 @@ async def reply(ctx: Ctx) -> dict[str, Any]:
             conv.category, conv.status, conv.unread = "spam", "closed", 0
         return {"summary": "رسالة مزعجة — أُغلقت دون رد", "category": "spam", "quiet": True}
     ctx.progress(f"يرد على عميل في {CHANNEL_LABELS[channel]}")
+    kb_part = f"\nقاعدة المعرفة — هي وملف العلامة مصدر الحقائق الوحيد:\n{kb_text}\n" if kb_text else ""
     prompt = (f"محادثة {('تعليق' if kind == 'comment' else 'رسالة خاصة')} على {CHANNEL_LABELS[channel]}"
               f"{(' — على منشور: ' + text.clip(post.caption, 140)) if post else ''}.\n"
+              f"{history_line + chr(10) if history_line else ''}"
               f"اسم العميل كما كتبه: {prompts.untrusted(name or 'عميل')}\n"
-              f"{prompts.untrusted(transcript)}\n\nصنّف آخر رسالة واكتب ردًا احترافيًا دافئًا بلهجة العلامة "
+              f"{prompts.untrusted(transcript)}\n{kb_part}"
+              "\nصنّف آخر رسالة واكتب ردًا احترافيًا دافئًا بلهجة العلامة "
               f"({'قصير جدًا لأنه تعليق عام' if kind == 'comment' else 'واضح ومفيد'}). "
-              "لا تذكر أسعارًا أو مواعيد غير موجودة في ملف العلامة؛ وجّه للتواصل الخاص عند الحاجة. "
+              "أجب فقط بما يرد في ملف العلامة وقاعدة المعرفة حرفيًا. سؤال لا تغطيه معلوماتك: لا تخمّن ولا تقرّب — "
+              "اعتذر بلطف، قل إننا سنتأكد ونعود له بإجابة دقيقة، واجعل escalate=true. "
+              "لا تذكر أسعارًا أو مواعيد أو روابط غير موجودة فيهما؛ وجّه للتواصل الخاص عند الحاجة. "
               "الشكوى: اعتذار + وعد بالمتابعة + escalate=true. المزعج: reply فارغ.")
     result = await ctx.ai(prompt=prompt, schema=REPLY_SCHEMA, max_tokens=900,
                           simulate=lambda: simulated_reply(classify(last_text), name, brand))
@@ -145,7 +164,7 @@ async def reply(ctx: Ctx) -> dict[str, Any]:
             conv.status = "closed"
             return {"summary": f"{CATEGORY_LABELS[category]} — بدون رد", "category": category}
         decision = policy.decide(s, "content", "reply")
-        hold = risky(body, brand)
+        hold = risky(body, brand, extra_known=kb_text)
         if hold and decision == "auto":
             decision = "approve"
         if decision == "off":

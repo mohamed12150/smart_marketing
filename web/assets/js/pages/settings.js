@@ -13,9 +13,11 @@ import GeneralTab from './settings/general.js';
 import UsersTab from './settings/users.js';
 import GoalsTab from './settings/goals.js';
 import AccountTab from './settings/account.js';
+import KnowledgeTab from './settings/knowledge.js';
 
 const TABS = [
   { id: 'brand', label: 'العلامة', hint: 'الملف الذي يقرؤه كل وكيل', icon: 'palette', view: BrandTab },
+  { id: 'knowledge', label: 'قاعدة المعرفة', hint: 'الحقائق التي يجيب بها الوكلاء', icon: 'book', view: KnowledgeTab },
   { id: 'agents', label: 'الوكلاء', hint: 'النموذج والجدول والتعليمات', icon: 'bot', view: AgentsTab },
   { id: 'permissions', label: 'الاستقلالية والصلاحيات', hint: 'ما يفعله الوكلاء وحدهم', icon: 'gauge', view: PermissionsTab },
   { id: 'goals', label: 'أهداف القائد', hint: 'ما يسعى إليه وكيف يتدخل', icon: 'target', view: GoalsTab },

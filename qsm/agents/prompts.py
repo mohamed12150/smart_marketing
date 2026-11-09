@@ -43,6 +43,20 @@ def brand_block(brand: settings_mod.Brand) -> str:
     return "\n".join(lines)
 
 
+def knowledge_block(kb: settings_mod.Knowledge) -> str:
+    """The grounding text for customer replies; empty when the owner has written nothing yet."""
+    parts: list[str] = []
+    if kb.policies:
+        parts.append("السياسات المعتمدة:")
+        parts += [f"- {p.title}: {p.text}" if p.text else f"- {p.title}" for p in kb.policies]
+    if kb.faqs:
+        parts.append("أسئلة شائعة بإجاباتها المعتمدة:")
+        parts += [f"س: {q.question}\nج: {q.answer}" for q in kb.faqs if q.answer]
+    if kb.notes.strip():
+        parts.append("معلومات إضافية معتمدة:\n" + kb.notes.strip())
+    return "\n".join(parts)
+
+
 def static_system(spec: AgentSpec, brand: settings_mod.Brand, instructions: str = "") -> str:
     parts = [CHARTER, f"\nدورك: {spec.name} — {spec.title}\n{spec.persona}"]
     if spec.channel:

@@ -163,6 +163,55 @@ def test_injected_link_reply_waits_for_owner(owner: TestClient, inbound, monkeyp
     assert appr["payload"]["held"] == "يحتوي رابطًا خارجيًا"
 
 
+def test_knowledge_base_facts_are_allowed(env) -> None:
+    from qsm import settings
+    from qsm.agents.guard import risky
+
+    brand = settings.Brand(website="rose.sa", phone="0500000000")
+    kb = "التوصيل لجدة 25 ريال خلال يومين. رقم الدعم 0533334444. موقع الفرع maps.app.goo.gl/xyz"
+    assert "سعر" in risky("رسوم التوصيل 25 ريال", brand)
+    assert risky("رسوم التوصيل 25 ريال", brand, extra_known=kb) == ""
+    assert risky("اتصل بالدعم على 0533334444", brand, extra_known=kb) == ""
+    assert "رقم" in risky("اتصل على 0599999999", brand, extra_known=kb)
+    assert risky("موقع الفرع: maps.app.goo.gl/xyz", brand, extra_known=kb) == ""
+    assert "رابط" in risky("ادخل evil.test/win", brand, extra_known=kb)
+
+
+def test_knowledge_settings_roundtrip(owner: TestClient) -> None:
+    body = {"faqs": [{"question": "هل يوجد توصيل؟", "answer": "نعم خلال 24 ساعة"}],
+            "policies": [{"title": "الاسترجاع", "text": "خلال 14 يومًا بحالته الأصلية"}], "notes": "فرعنا في الرياض"}
+    r = owner.put("/api/settings/knowledge", json=body, headers=H)
+    assert r.status_code == 200 and r.json()["data"]["faqs"][0]["answer"] == "نعم خلال 24 ساعة"
+    got = owner.get("/api/settings").json()["data"]["sections"]["knowledge"]
+    assert got["policies"][0]["title"] == "الاسترجاع" and got["notes"] == "فرعنا في الرياض"
+
+
+def test_knowledge_block_renders(env) -> None:
+    from qsm import settings
+    from qsm.agents import prompts
+
+    kb = settings.Knowledge(faqs=[settings.QA(question="هل يوجد توصيل؟", answer="نعم.")],
+                            policies=[settings.Policy(title="الشحن", text="مجاني فوق 200 ريال")], notes="فرع جدة")
+    block = prompts.knowledge_block(kb)
+    assert "الشحن" in block and "هل يوجد توصيل؟" in block and "فرع جدة" in block
+    assert prompts.knowledge_block(settings.Knowledge()) == ""
+
+
+def test_knowledge_price_reply_is_not_held(owner: TestClient, inbound, monkeypatch) -> None:
+    from qsm.agents import community
+
+    owner.put("/api/settings/knowledge",
+              json={"faqs": [{"question": "كم رسوم التوصيل؟", "answer": "التوصيل 25 ريال لكل المدن"}]}, headers=H)
+    monkeypatch.setattr(community, "simulated_reply", lambda c, n, b: {
+        "category": "inquiry", "sentiment": "neutral", "priority": 3, "escalate": False, "summary": "",
+        "reply": "أهلًا! رسوم التوصيل 25 ريال لكل المدن."})
+    inbound("كم رسوم التوصيل؟")
+    owner.post("/api/agents/instagram/run", json={"kind": "channel.engage"}, headers=H)
+    run_tasks()
+    conv = owner.get("/api/inbox").json()["data"][0]
+    assert conv["status"] == "answered"
+
+
 def test_reply_guard_resists_lookalikes(env) -> None:
     from qsm import settings
     from qsm.agents.community import risky
