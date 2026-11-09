@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # إعداد سيرفر QHub (Plesk) لتشغيل Qhub Smart Marketing — يُشغَّل على السيرفر بصلاحية root مرة واحدة:
 #   sudo bash <app-dir>/deploy/setup-server.sh <domain> [app-dir]
-# مثال:
-#   sudo bash /var/www/vhosts/qub-sa.com/qhub-smart-marketing/deploy/setup-server.sh mk.qub-sa.com
+# بدون [app-dir] يُستنتج المسار من مكان السكربت نفسه (<app>/deploy).
 #
 # لا يثبت nginx ولا شهادات — ذلك يُدار من Plesk (انظر plesk-nginx-directives.txt).
 # لا يلمس خدمات QHub الأخرى (qhub, qhub-wa-engine, qhub-wa-queue) ولا httpdocs.
 set -euo pipefail
 
 DOMAIN="${1:?Usage: setup-server.sh <domain> [app-dir]}"
-APP="${2:-/var/www/vhosts/qub-sa.com/qhub-smart-marketing}"
+APP="${2:-$(cd "$(dirname "$0")/.." && pwd)}"
 DATA="$(dirname "$APP")/qsm-data"
 ENVFILE=/etc/qsm/qsm.env
 SVC=qhub-smart-marketing

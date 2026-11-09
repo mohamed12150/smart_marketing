@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
-# يرفع الكود من هذا الجهاز إلى سيرفر QHub (يُشغَّل محليًا من Git Bash):
-#   bash deploy/upload.sh                                   # الوجهة الافتراضية أدناه
+# يرفع الكود من هذا الجهاز إلى السيرفر (يُشغَّل محليًا من Git Bash):
+#   bash deploy/upload.sh                                   # الوجهة من deploy/target.local.conf
 #   bash deploy/upload.sh root@1.2.3.4 /path/to/app         # وجهة مخصصة
+# عنوان السيرفر ومساره لا يُكتبان هنا (الملف يُرفع على git) بل في deploy/target.local.conf
+# — ملف محلي غير مُتتبع بهذا الشكل:
+#   TARGET=root@SERVER_IP
+#   APP=/path/to/app/on/server
+#   KEY=$HOME/.ssh/deploy_key        # اختياري
 # الرفع الأول ينشئ مجلد التطبيق؛ التحديثات تستبدل الكود وتعيد تشغيل الخدمة دون لمس qsm-data إطلاقًا.
 set -euo pipefail
 
-TARGET="${1:-root@195.35.1.229}"
-APP="${2:-/var/www/vhosts/qub-sa.com/qhub-smart-marketing}"
-KEY="$HOME/.ssh/qhub_deploy"
+CONF="$(dirname "$0")/target.local.conf"
+[ -f "$CONF" ] && . "$CONF"
+TARGET="${1:-${TARGET:?لا وجهة — أنشئ deploy/target.local.conf أو مرر user@host كمعامل أول}}"
+APP="${2:-${APP:?لا مسار — أضف APP في deploy/target.local.conf أو مرره كمعامل ثانٍ}}"
+KEY="${KEY:-$HOME/.ssh/qhub_deploy}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 PKG="$(mktemp -d)/qsm-app.tar.gz"
 

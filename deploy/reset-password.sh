@@ -6,7 +6,9 @@ set -euo pipefail
 
 EMAIL="${1:?Usage: reset-password.sh <email> [new-password]}"
 WANTED="${2:-}"
-APP=/var/www/vhosts/qub-sa.com/qhub-smart-marketing
+# مجلد التطبيق من خدمة systemd (يعمل أينما نُسخ السكربت)، أو مرره: QSM_APP_DIR=/path
+APP="${QSM_APP_DIR:-$(systemctl show qhub-smart-marketing -p WorkingDirectory --value)}"
+[ -n "$APP" ] && [ -d "$APP" ] || { echo "لم أجد مجلد التطبيق — شغّله: QSM_APP_DIR=/path bash reset-password.sh <email>"; exit 1; }
 set -a; . /etc/qsm/qsm.env; set +a
 cd "$APP"
 
